@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="cyberpunk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>游戏代练助手 - 买家端</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #1a0e3f;
+      --neon-purple: #7C3AED;
+      --neon-blue: #5B7EFF;
+      --neon-green: #10B981;
+      --text: #ffffff;
+      --text-secondary: #d1d5db;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Poppins', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    canvas#particles {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 64px;
+      background: rgba(26,14,63,0.6);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--neon-purple);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      padding: 0 2rem;
+    }
+
+    .hero {
+      padding: 140px 2rem 60px;
+      text-align: center;
+    }
+
+    .hero h1 {
+      font-size: clamp(2.5rem, 8vw, 3.5rem);
+      font-weight: 800;
+      margin-bottom: 1rem;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    .search-bar {
+      max-width: 600px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+
+    .search-bar input {
+      width: 100%;
+      height: 56px;
+      border-radius: 9999px;
+      border: 2px solid var(--neon-purple);
+      background: rgba(26,14,63,0.7);
+      color: white;
+      padding: 0 1.8rem;
+      font-size: 1.1rem;
+      outline: none;
+      box-shadow: 0 0 20px rgba(124,58,237,0.4);
+    }
+
+    .categories {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin: 1.5rem 0;
+      padding: 0 1rem;
+    }
+
+    .category-btn {
+      padding: 0.6rem 1.4rem;
+      border-radius: 9999px;
+      background: rgba(26,14,63,0.8);
+      border: 1px solid var(--neon-purple);
+      color: white;
+      cursor: pointer;
+    }
+
+    .category-btn.active, .category-btn:hover {
+      background: var(--neon-purple);
+      box-shadow: 0 0 15px rgba(124,58,237,0.6);
+    }
+
+    .game-grid {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 1rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .game-card {
+      background: linear-gradient(135deg, rgba(30,20,60,0.9), rgba(20,10,50,0.9));
+      border: 1px solid var(--neon-purple);
+      border-radius: 16px;
+      padding: 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.4s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .game-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 40px rgba(124,58,237,0.3);
+    }
+
+    .game-card:active {
+      transform: scale(0.97);
+    }
+
+    .game-icon {
+      font-size: 6rem;
+      margin: 1rem 0;
+      transition: transform 0.4s;
+    }
+
+    .game-card:hover .game-icon {
+      transform: scale(1.15);
+    }
+
+    .game-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+      background-size: 200% 100%;
+      animation: flash 4s linear infinite;
+      pointer-events: none;
+      opacity: 0.6;
+    }
+
+    @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
+    @keyframes flash { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+
+    #purchase-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+
+    .modal-content {
+      background: linear-gradient(135deg, rgba(26,14,63,0.92), rgba(10,5,40,0.92));
+      border: 2px solid var(--neon-purple);
+      border-radius: 20px;
+      padding: 2.2rem;
+      max-width: 90%;
+      width: 480px;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 0 60px rgba(124,58,237,0.5);
+      backdrop-filter: blur(12px);
+      position: relative;
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 1rem;
+      right: 1.2rem;
+      background: none;
+      border: none;
+      color: var(--neon-purple);
+      font-size: 1.8rem;
+      cursor: pointer;
+    }
+
+    .request-wrapper {
+      max-height: 420px;
+      overflow-y: auto;
+      padding-right: 8px;
+    }
+
+    .request-wrapper::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    .request-wrapper::-webkit-scrollbar-thumb {
+      background: var(--neon-purple);
+      border-radius: 4px;
+    }
+
+    .request-wrapper::-webkit-scrollbar-track {
+      background: rgba(124,58,237,0.1);
+      border-radius: 4px;
+    }
+
+    .request-options {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      padding: 0.5rem 0;
+    }
+
+    .request-card {
+      background: rgba(40,30,80,0.4);
+      border: 1px solid rgba(124,58,237,0.4);
+      border-radius: 14px;
+      padding: 1.1rem 1.3rem;
+      cursor: pointer;
+      transition: all 0.35s;
+    }
+
+    .request-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--neon-purple);
+      box-shadow: 0 12px 30px rgba(124,58,237,0.35);
+    }
+
+    .request-card.selected {
+      border-color: var(--neon-green);
+      background: rgba(16,185,129,0.12);
+      box-shadow: 0 0 25px rgba(16,185,129,0.4);
+    }
+
+    .custom-demand-input {
+      margin-top: 1.5rem;
+      display: none;
+    }
+
+    .custom-demand-input label {
+      display: block;
+      margin-bottom: 0.8rem;
+      font-weight: 600;
+    }
+
+    .custom-demand-input textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 1rem;
+      border: 2px solid var(--neon-purple);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.05);
+      color: white;
+      font-size: 1rem;
+      resize: vertical;
+    }
+
+    .btn {
+      padding: 0.9rem 2.2rem;
+      border: none;
+      border-radius: 999px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 1.05rem;
+    }
+
+    .btn-green {
+      background: var(--neon-green);
+      color: black;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .success {
+      text-align: center;
+      padding: 1.5rem 1rem;
+    }
+
+    .success-icon {
+      font-size: 4.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .order-key-info {
+      background: rgba(16,185,129,0.12);
+      border: 2px solid var(--neon-green);
+      border-radius: 16px;
+      padding: 1.8rem;
+      margin: 1.5rem 0 1rem;
+      box-shadow: 0 0 30px rgba(16,185,129,0.4);
+    }
+
+    .order-key-item {
+      display: flex;
+      justify-content: space-between;
+      margin: 1.2rem 0;
+      font-size: 1.1rem;
+    }
+
+    .order-key-label {
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .order-key-value {
+      font-weight: 800;
+      color: var(--neon-green);
+      font-size: 1.25rem;
+    }
+
+    .warning-text {
+      color: #ffcc00;
+      font-weight: 600;
+      font-size: 1rem;
+      margin: 1rem 0;
+      padding: 0.8rem;
+      background: rgba(255,204,0,0.1);
+      border-radius: 8px;
+      border: 1px solid #ffcc00;
+    }
+
+    .progress-container {
+      width: 85%;
+      height: 10px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 5px;
+      margin: 2rem auto;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--neon-purple), var(--neon-blue));
+      transition: width 1.2s linear;
+    }
+
+    .copy-btn {
+      background: var(--neon-blue);
+      color: white;
+      padding: 0.8rem 1.5rem;
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+      font-weight: 600;
+      margin: 1rem 0;
+    }
+
+    .copy-btn:hover {
+      background: #4c8cff;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="particles"></canvas>
+
+<header>
+  <h2 style="font-size:1.4rem; font-weight:700;">游戏代练助手</h2>
+</header>
+
+<div class="hero">
+  <h1>赛博代练世界</h1>
+  <p style="font-size:1.3rem; opacity:0.9; margin-top:0.5rem;">让 ranking 变成过去式</p>
+</div>
+
+<div class="search-bar">
+  <input type="text" placeholder="搜索游戏名称..." id="searchInput"/>
+</div>
+
+<div class="categories">
+  <button class="category-btn active" data-cat="全部">全部</button>
+  <button class="category-btn" data-cat="MOBA">MOBA</button>
+  <button class="category-btn" data-cat="射击">射击</button>
+  <button class="category-btn" data-cat="动作">动作</button>
+  <button class="category-btn" data-cat="休闲">休闲</button>
+</div>
+
+<div class="game-grid" id="gameGrid"></div>
+
+<!-- 购买弹窗 -->
+<div id="purchase-modal">
+  <div class="modal-content" id="modalInner">
+    <div id="requestSelection">
+      <button class="close-btn" onclick="closeModal()">×</button>
+
+      <h2 id="gameTitle" style="font-size:1.8rem; font-weight:700; text-shadow:0 0 15px rgba(124,58,237,0.7); margin-bottom:0.8rem; text-align:center;"></h2>
+
+      <div style="background:rgba(16,185,129,0.08); border:1px solid var(--neon-green); border-radius:12px; padding:1.2rem; margin:1rem 0 1.5rem; font-size:0.95rem; line-height:1.6; text-align:center;">
+        <strong style="color:var(--neon-green); font-size:1.1rem;">为什么选择霓虹代练？</strong><br>
+        真人专业代打 · 账号全程安全无封 · 实时进度截图 + 战绩透明 · 超时/掉星自动赔付 · 价格公开无套路<br>
+        10年老店，赛博后盾，让你躺赢上分！
+      </div>
+
+      <p style="text-align:center; opacity:0.75; font-size:0.95rem; margin-bottom:1.8rem;">
+        选择你的代练需求（内容多可上下滑动查看）
+      </p>
+
+      <div class="request-wrapper">
+        <div class="request-options" id="requestOptions"></div>
+      </div>
+
+      <!-- 其他需求填写区域（默认隐藏） -->
+      <div class="custom-demand-input" id="customDemandInput">
+        <label>请详细描述你的具体需求（必填）：</label>
+        <textarea id="customDemandText" placeholder="例如：冲王者星耀+20星，需要全程语音陪玩，晚上8点开始"></textarea>
+      </div>
+
+      <div style="margin-top:2rem; text-align:center;">
+        <button id="confirmBtn" class="btn btn-green" disabled onclick="startOrderProcess()">
+          确认下单（请先选择需求）
+        </button>
+      </div>
+    </div>
+
+    <div id="loadingScreen" style="display:none; text-align:center; padding:5rem 1rem;">
+      <div style="font-size:3.5rem; margin-bottom:1.5rem; animation:float 2s infinite;">⚡</div>
+      <h2 style="color:var(--neon-purple);">正在生成订单...</h2>
+      <div class="progress-container">
+        <div id="progress" class="progress-bar"></div>
+      </div>
+    </div>
+
+    <div id="successScreen" style="display:none;"></div>
+  </div>
+</div>
+
+<script>
+// 粒子背景
+const canvas = document.getElementById('particles');
+const ctx = canvas.getContext('2d');
+let particles = [];
+
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  initParticles();
+}
+
+function initParticles() {
+  particles = [];
+  const count = Math.min(150, Math.floor(canvas.width * canvas.height / 8000));
+  for(let i = 0; i < count; i++){
+    particles.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      size: Math.random() * 2 + 1,
+      speedX: (Math.random() - 0.5) * 0.5,
+      speedY: (Math.random() - 0.5) * 0.5,
+      opacity: Math.random() * 0.7 + 0.3,
+      hue: Math.random() > 0.3 ? 270 : 210
+    });
+  }
+}
+
+function animateParticles() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  particles.forEach(p => {
+    p.x += p.speedX;
+    p.y += p.speedY;
+    if(p.x < 0 || p.x > canvas.width) p.speedX *= -1;
+    if(p.y < 0 || p.y > canvas.height) p.speedY *= -1;
+
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+    ctx.fillStyle = `hsla(${p.hue}, 80%, 70%, ${p.opacity})`;
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = `hsla(${p.hue}, 100%, 70%, 0.8)`;
+    ctx.fill();
+  });
+  requestAnimationFrame(animateParticles);
+}
+
+resize();
+animateParticles();
+
+// 游戏列表
+const games = [
+  {name: "王者荣耀",     cat: "MOBA", icon: "⚔️"},
+  {name: "和平精英",     cat: "射击", icon: "🔫"},
+  {name: "火影忍者",     cat: "动作", icon: "🌀"},
+  {name: "蛋仔派对",     cat: "休闲", icon: "🥚"},
+  {name: "第五人格",     cat: "恐怖", icon: "👻"},
+  {name: "光遇",         cat: "社交", icon: "✨"},
+  {name: "暗区突围",     cat: "射击", icon: "🎯"},
+  {name: "三角洲行动",   cat: "射击", icon: "🚁"},
+  {name: "永劫无间",     cat: "动作", icon: "🗡️"},
+  {name: "穿越火线",     cat: "射击", icon: "🔫"},
+  {name: "使命召唤",     cat: "射击", icon: "🔫"},
+  {name: "逆战未来",     cat: "射击", icon: "⚡"},
+  {name: "英雄联盟",     cat: "MOBA", icon: "🛡️"}
+];
+
+const grid = document.getElementById('gameGrid');
+const searchInput = document.getElementById('searchInput');
+const catBtns = document.querySelectorAll('.category-btn');
+let currentCat = '全部';
+
+function renderGames() {
+  const term = searchInput.value.toLowerCase().trim();
+  grid.innerHTML = '';
+
+  games
+    .filter(g => (currentCat === '全部' || g.cat === currentCat) && g.name.toLowerCase().includes(term))
+    .forEach(game => {
+      const card = document.createElement('div');
+      card.className = 'game-card';
+      card.innerHTML = `
+        <div class="game-icon">${game.icon}</div>
+        <h3>${game.name}</h3>
+        <p style="opacity:0.7; font-size:0.9rem;">${game.cat}</p>
+      `;
+      card.onclick = () => openPurchase(game.name);
+      grid.appendChild(card);
+    });
+
+  if (grid.children.length === 0) {
+    grid.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; padding: 4rem 1rem; opacity: 0.7; font-size: 1.2rem;">没有找到匹配的游戏，请清空搜索框或切换分类</p>';
+  }
+}
+
+renderGames();
+
+searchInput.addEventListener('input', renderGames);
+
+catBtns.forEach(btn => {
+  btn.onclick = () => {
+    catBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentCat = btn.dataset.cat;
+    renderGames();
+  };
+});
+
+let selectedRequestType = null;
+let customDemand = ''; // 保存买家填写的自定义需求
+
+function openPurchase(name) {
+  selectedRequestType = null;
+  customDemand = '';
+  document.getElementById('customDemandInput').style.display = 'none';
+  document.getElementById('customDemandText').value = '';
+
+  document.getElementById('gameTitle').textContent = name;
+
+  const btn = document.getElementById('confirmBtn');
+  btn.disabled = true;
+  btn.textContent = '确认下单（请先选择需求）';
+  btn.style.opacity = '0.5';
+  btn.style.cursor = 'not-allowed';
+
+  const options = document.getElementById('requestOptions');
+  options.innerHTML = '';
+
+  let demands = [];
+
+  if (name === "王者荣耀" || name === "英雄联盟") {
+    demands = [
+      {type: "排位上分", icon: "🏆", title: "排位上分", desc: "稳定冲分，保星保段"},
+      {type: "陪玩", icon: "🎤", title: "陪玩", desc: "语音/文字陪玩"},
+      {type: "新号开荒", icon: "🌱", title: "新号开荒", desc: "新号快速发育"},
+      {type: "其他需求", icon: "🛠️", title: "其他需求", desc: "个性化定制服务"}
+    ];
+  } else if (name === "光遇") {
+    demands = [
+      {type: "跑图/毕业", icon: "🗺️", title: "跑图/毕业", desc: "快速跑图 + 毕业收集"},
+      {type: "复刻", icon: "🔄", title: "复刻", desc: "代做复刻活动内容"},
+      {type: "常驻", icon: "🌟", title: "常驻", desc: "常驻内容代做"},
+      {type: "陪伴", icon: "🤝", title: "陪伴", desc: "全程陪伴游玩"},
+      {type: "其他需求", icon: "🛠️", title: "其他需求", desc: "个性化定制服务"}
+    ];
+  } else if (name === "暗区突围" || name === "三角洲行动") {
+    demands = [
+      {type: "跑刀撤离", icon: "🏃‍♂️", title: "跑刀撤离", desc: "快速跑刀安全撤离"},
+      {type: "任务代做", icon: "📋", title: "任务代做", desc: "代完成所有任务"},
+      {type: "护航", icon: "🛡️", title: "护航", desc: "全程护航带飞"},
+      {type: "其他需求", icon: "🛠️", title: "其他需求", desc: "个性化定制服务"}
+    ];
+  } else if (name === "永劫无间") {
+    demands = [
+      {type: "修罗分", icon: "👹", title: "修罗分", desc: "冲修罗段位"},
+      {type: "段位", icon: "📈", title: "段位", desc: "段位提升"},
+      {type: "武道争锋", icon: "⚔️", title: "武道争锋", desc: "武道争锋模式代打"},
+      {type: "陪玩", icon: "🎤", title: "陪玩", desc: "语音/文字陪玩"},
+      {type: "其他需求", icon: "🛠️", title: "其他需求", desc: "个性化定制服务"}
+    ];
+  } else if (name === "穿越火线" || name === "使命召唤" || name === "逆战未来") {
+    demands = [
+      {type: "排位上分", icon: "🏆", title: "排位上分", desc: "冲段位保星"},
+      {type: "挑战模式", icon: "⚔️", title: "挑战模式", desc: "代打挑战模式"},
+      {type: "刷关", icon: "🔄", title: "刷关", desc: "高效刷关卡/副本"},
+      {type: "通行证", icon: "📜", title: "通行证", desc: "代冲通行证等级"},
+      {type: "任务", icon: "📋", title: "任务", desc: "代做所有任务"},
+      {type: "其他需求", icon: "🛠️", title: "其他需求", desc: "个性化定制服务"}
+    ];
+  } else if (name === "蛋仔派对" || name === "第五人格") {
+    demands = [
+      {type: "段位上分", icon: "🏆", title: "段位上分", desc: "冲段位保星"},
+      {type: "陪玩", icon: "🎤", title: "陪玩", desc: "语音/文字陪玩"},
+      {type: "其他需求", icon: "🛠️", title: "其他需求", desc: "个性化定制服务"}
+    ];
+  } else {
+    demands = [
+      {type: "段位提升", icon: "📈", title: "段位提升", desc: "稳定冲分，保星保段"},
+      {type: "其他需求", icon: "🛠️", title: "其他需求", desc: "个性化定制服务"}
+    ];
+  }
+
+  demands.forEach(demand => {
+    const card = document.createElement('div');
+    card.className = 'request-card';
+    card.dataset.type = demand.type;
+    card.onclick = () => selectRequest(card);
+
+    card.innerHTML = `
+      <div class="icon">${demand.icon || ''}</div>
+      <div class="info">
+        <h4>${demand.title}</h4>
+        <p>${demand.desc}</p>
+      </div>
+    `;
+    options.appendChild(card);
+  });
+
+  document.getElementById('requestSelection').style.display = 'block';
+  document.getElementById('loadingScreen').style.display = 'none';
+  document.getElementById('successScreen').style.display = 'none';
+
+  document.getElementById('purchase-modal').style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('purchase-modal').style.display = 'none';
+}
+
+function selectRequest(el) {
+  document.querySelectorAll('.request-card').forEach(card => card.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedRequestType = el.dataset.type;
+
+  const btn = document.getElementById('confirmBtn');
+  btn.disabled = false;
+  btn.textContent = `确认下单 - ${selectedRequestType}`;
+  btn.style.opacity = '1';
+  btn.style.cursor = 'pointer';
+
+  const customInput = document.getElementById('customDemandInput');
+  if (selectedRequestType === '其他需求') {
+    customInput.style.display = 'block';
+  } else {
+    customInput.style.display = 'none';
+  }
+}
+
+function startOrderProcess() {
+  if (!selectedRequestType) return alert('请先选择需求');
+
+  // 如果是“其他需求”，必须填写内容
+  if (selectedRequestType === '其他需求') {
+    customDemand = document.getElementById('customDemandText').value.trim();
+    if (!customDemand) {
+      return alert('请填写具体需求描述后再提交！');
+    }
+  } else {
+    customDemand = '';
+  }
+
+  document.getElementById('requestSelection').style.display = 'none';
+  document.getElementById('loadingScreen').style.display = 'block';
+
+  const progress = document.getElementById('progress');
+  progress.style.width = '0%';
+  setTimeout(() => progress.style.width = '100%', 50);
+
+  setTimeout(showOrderSuccess, 1200);
+}
+
+function showOrderSuccess() {
+  const gameName = document.getElementById('gameTitle').textContent;
+  const orderId = 'CYB-' + Date.now().toString().slice(5) + '-' + Math.floor(Math.random()*90000 + 10000).toString().padStart(5,'0');
+  const estDays = 1 + Math.floor(Math.random() * 6);
+
+  let demandDisplay = selectedRequestType;
+  if (selectedRequestType === '其他需求' && customDemand) {
+    demandDisplay += `（${customDemand}）`;
+  }
+
+  document.getElementById('successScreen').innerHTML = `
+    <div class="success">
+      <div class="success-icon">🎉</div>
+      <h2 style="color:var(--neon-green); font-size:2rem; margin:0.8rem 0 1rem; text-shadow:0 0 15px rgba(16,185,129,0.7);">
+        订单创建成功！
+      </h2>
+
+      <div class="order-key-info">
+        <div class="order-key-item">
+          <span class="order-key-label">订单号</span>
+          <span class="order-key-value">${orderId}</span>
+        </div>
+        <div class="order-key-item">
+          <span class="order-key-label">预计完成时间</span>
+          <span class="order-key-value">${estDays} 天内</span>
+        </div>
+      </div>
+
+      <div class="warning-text">
+        重要提醒：预计完成时间仅供参考，请以实际交付时间为准。
+      </div>
+
+      <div class="order-details">
+        <div><strong>游戏：</strong> ${gameName}</div>
+        <div><strong>代练需求：</strong> ${demandDisplay}</div>
+        <div style="margin-top:0.8rem; color:var(--neon-green);"><strong>当前状态：</strong> 已生成</div>
+      </div>
+
+      <p style="color:#ffcc00; font-weight:600; margin:1.8rem 0 1rem; font-size:1.05rem;">
+        请把订单号或订单信息截图转发商家
+      </p>
+
+      <button class="copy-btn" onclick="copyOrderInfo()">
+        一键复制订单信息
+      </button>
+
+      <button class="btn btn-purple" onclick="closeModal()" style="margin-top:1rem; padding:1.1rem 3rem;">
+        返回主页
+      </button>
+    </div>
+  `;
+
+  document.getElementById('loadingScreen').style.display = 'none';
+  document.getElementById('successScreen').style.display = 'block';
+
+  setTimeout(closeModal, 15000);
+}
+
+// 一键复制（使用兼容本地文件的 textarea 方法）
+function copyOrderInfo() {
+  const gameName = document.getElementById('gameTitle').textContent;
+  const orderId = document.querySelectorAll('.order-key-value')[0]?.textContent || '未知';
+  const estDays = document.querySelectorAll('.order-key-value')[1]?.textContent || '未知';
+
+  let demandDisplay = selectedRequestType;
+  if (selectedRequestType === '其他需求' && customDemand) {
+    demandDisplay += `（${customDemand}）`;
+  }
+
+  const orderInfo = `
+订单号: ${orderId}
+游戏: ${gameName}
+需求: ${demandDisplay}
+预计完成: ${estDays}
+下单时间: ${new Date().toLocaleString('zh-CN')}
+当前状态: 已生成
+
+请尽快处理！
+  `.trim();
+
+  // 创建临时 textarea 进行复制（兼容 file:// 本地文件）
+  const textArea = document.createElement("textarea");
+  textArea.value = orderInfo;
+  textArea.style.position = "fixed";
+  textArea.style.top = "0";
+  textArea.style.left = "0";
+  textArea.style.opacity = "0";
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+
+  try {
+    const successful = document.execCommand('copy');
+    if (successful) {
+      alert('订单信息已成功复制到剪贴板！\n请粘贴发送给商家。');
+    } else {
+      alert('复制失败，请手动选中上方内容复制');
+    }
+  } catch (err) {
+    console.error('复制失败:', err);
+    alert('复制失败，请手动选中上方订单信息 → 右键复制或 Ctrl+C');
+  }
+
+  document.body.removeChild(textArea);
+}
+</script>
+</body>
+</html>
